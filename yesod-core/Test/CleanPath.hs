@@ -23,8 +23,8 @@ getSubsite = const Subsite
 data SubsiteRoute = SubsiteRoute [TS.Text]
     deriving (Eq, Show, Read)
 type instance Route Subsite = SubsiteRoute
-instance RenderRoute SubsiteRoute where
-    renderRoute (SubsiteRoute x) = (x, [])
+instance RenderRoute master SubsiteRoute where
+    renderRoute _ (SubsiteRoute x) = (x, [])
 
 instance YesodDispatch Subsite master where
     yesodDispatch _ _ pieces _ _ = Just $ const $ return $ responseLBS

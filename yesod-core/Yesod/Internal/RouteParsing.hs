@@ -15,7 +15,7 @@ module Yesod.Internal.RouteParsing
     , Piece (..)
     ) where
 
-import Web.PathPieces
+import Yesod.Internal.PathPieces (SinglePiece (..), MultiPiece (..))
 import Language.Haskell.TH.Syntax
 import Data.Maybe
 import Data.Either
@@ -115,36 +115,38 @@ createRender = mapM go
   where
     go (n, Simple ps _) = do
         let ps' = zip [1..] ps
+        master <- newName "master"
         let pat = ConP (mkName n) $ mapMaybe go' ps'
-        bod <- mkBod ps'
-        return $ Clause [pat] (NormalB $ TupE [bod, ListE []]) []
+        bod <- mkBod master ps'
+        return $ Clause [VarP master, pat] (NormalB $ TupE [bod, ListE []]) []
     go (n, SubSite{ssRender = r, ssPieces = pieces}) = do
         cons' <- [|\a (b, c) -> (a ++ b, c)|]
         let cons a b = cons' `AppE` a `AppE` b
+        master <- newName "master"
         x <- newName "x"
-        let r' = r `AppE` VarE x
+        let r' = r `AppE` VarE master `AppE` VarE x
         let pieces' = zip [1..] pieces
         let pat = ConP (mkName n) $ mapMaybe go' pieces' ++ [VarP x]
-        bod <- mkBod pieces'
-        return $ Clause [pat] (NormalB $ cons bod r') []
+        bod <- mkBod master pieces'
+        return $ Clause [VarP master, pat] (NormalB $ cons bod r') []
     go' (_, StaticPiece _) = Nothing
     go' (i, _) = Just $ VarP $ mkName $ "var" ++ show (i :: Int)
-    mkBod :: (Show t) => [(t, Piece)] -> Q Exp
-    mkBod [] = lift ([] :: [String])
-    mkBod ((_, StaticPiece x):xs) = do
+    mkBod :: (Show t) => Name -> [(t, Piece)] -> Q Exp
+    mkBod _master [] = lift ([] :: [String])
+    mkBod master ((_, StaticPiece x):xs) = do
         x' <- lift x
         pack <- [|Data.Text.pack|]
-        xs' <- mkBod xs
+        xs' <- mkBod master xs
         return $ ConE (mkName ":") `AppE` (pack `AppE` x') `AppE` xs'
-    mkBod ((i, SinglePiece _):xs) = do
+    mkBod master ((i, SinglePiece _):xs) = do
         let x' = VarE $ mkName $ "var" ++ show i
-        tsp <- [|toSinglePiece|]
+        tsp <- [|toSinglePiece $(return $ VarE master)|]
         let x'' = tsp `AppE` x'
-        xs' <- mkBod xs
+        xs' <- mkBod master xs
         return $ ConE (mkName ":") `AppE` x'' `AppE` xs'
-    mkBod ((i, MultiPiece _):_) = do
+    mkBod master ((i, MultiPiece _):_) = do
         let x' = VarE $ mkName $ "var" ++ show i
-        tmp <- [|toMultiPiece|]
+        tmp <- [|toMultiPiece $(return $ VarE master)|]
         return $ tmp `AppE` x'
 
 -- | Whether the set of resources cover all possible URLs.

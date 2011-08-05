@@ -124,8 +124,8 @@ data StaticRoute = StaticRoute [Text] [(Text, Text)]
 
 type instance Route Static = StaticRoute
 
-instance RenderRoute StaticRoute where
-    renderRoute (StaticRoute x y) = (x, y)
+instance RenderRoute master StaticRoute where
+    renderRoute _ (StaticRoute x y) = (x, y)
 
 instance Yesod master => YesodDispatch Static master where
     -- Need to append trailing slash to make relative links work

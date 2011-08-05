@@ -7,7 +7,7 @@ module Yesod.Internal.Dispatch
 
 import Prelude hiding (exp)
 import Language.Haskell.TH.Syntax
-import Web.PathPieces
+import Yesod.Internal.PathPieces (SinglePiece (..), MultiPiece (..))
 import Yesod.Internal.RouteParsing
 import Control.Monad (foldM)
 import Yesod.Handler (badMethod)
@@ -213,13 +213,13 @@ mkSimpleExp segments (StaticPiece s:pieces) frontVars x = do
                 , Match WildP (NormalB nothing) []
                 ]
     return exp
-mkSimpleExp segments (SinglePiece _:pieces) frontVars x = do
+mkSimpleExp segments (SinglePiece _:pieces) frontVars x@(master, _, _, _, _, _) = do
     srest <- newName "segments"
     next' <- newName "next'"
     innerExp <- mkSimpleExp (VarE srest) pieces (frontVars . (:) (VarE next')) x
     nothing <- [|Nothing|]
     next <- newName "next"
-    fsp <- [|fromSinglePiece|]
+    fsp <- [|fromSinglePiece $(return $ VarE master)|]
     let exp' = CaseE (fsp `AppE` VarE next)
                 [ Match
                     (ConP (mkName "Nothing") [])
@@ -238,12 +238,12 @@ mkSimpleExp segments (SinglePiece _:pieces) frontVars x = do
                 , Match WildP (NormalB nothing) []
                 ]
     return exp
-mkSimpleExp segments [MultiPiece _] frontVars x = do
+mkSimpleExp segments [MultiPiece _] frontVars x@(master, _, _, _, _, _) = do
     next' <- newName "next'"
     srest <- [|[]|]
     innerExp <- mkSimpleExp srest [] (frontVars . (:) (VarE next')) x
     nothing <- [|Nothing|]
-    fmp <- [|fromMultiPiece|]
+    fmp <- [|fromMultiPiece $(return $ VarE master)|]
     let exp = CaseE (fmp `AppE` segments)
                 [ Match
                     (ConP (mkName "Nothing") [])

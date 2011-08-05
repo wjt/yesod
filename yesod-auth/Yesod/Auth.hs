@@ -69,7 +69,7 @@ data Creds m = Creds
     , credsExtra :: [(Text, Text)]
     }
 
-class (Yesod m, SinglePiece (AuthId m), RenderMessage m FormMessage) => YesodAuth m where
+class (Yesod m, SinglePiece m (AuthId m), RenderMessage m FormMessage) => YesodAuth m where
     type AuthId m
 
     -- | Default destination on successful login, if no other
@@ -124,7 +124,7 @@ setCreds doRedirects creds = do
               Just ar -> do setMessageI Msg.InvalidLogin
                             redirect RedirectTemporary ar
         Just aid -> do
-            setSession credsKey $ toSinglePiece aid
+            setSession credsKey $ toSinglePiece y aid
             when doRedirects $ do
               setMessageI Msg.NowLoggedIn
               redirectUltDest RedirectTemporary $ loginDest y
@@ -172,10 +172,11 @@ handlePluginR plugin pieces = do
 -- | Retrieves user credentials, if user is authenticated.
 maybeAuthId :: YesodAuth m => GHandler s m (Maybe (AuthId m))
 maybeAuthId = do
+    y <- getYesod
     ms <- lookupSession credsKey
     case ms of
         Nothing -> return Nothing
-        Just s -> return $ fromSinglePiece s
+        Just s -> return $ fromSinglePiece y s
 
 maybeAuth :: ( YesodAuth m
              , Key val ~ AuthId m

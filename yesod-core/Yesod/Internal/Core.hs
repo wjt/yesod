@@ -82,8 +82,8 @@ import Text.Blaze (preEscapedLazyText)
 #define HAMLET $hamlet
 #endif
 
-class Eq u => RenderRoute u where
-    renderRoute :: u -> ([Text], [(Text, Text)])
+class Eq u => RenderRoute master u where
+    renderRoute :: master -> u -> ([Text], [(Text, Text)])
 
 -- | This class is automatically instantiated when you use the template haskell
 -- mkYesod function. You should never need to deal with it directly.
@@ -106,7 +106,7 @@ class YesodDispatch a master where
 
 -- | Define settings for a Yesod applications. The only required setting is
 -- 'approot'; other than that, there are intelligent defaults.
-class RenderRoute (Route a) => Yesod a where
+class RenderRoute a (Route a) => Yesod a where
     -- | An absolute URL to the root of the application. Do not include
     -- trailing slash.
     --
@@ -581,4 +581,4 @@ yesodRender y u qs =
           $ qs ++ qs')
         (urlRenderOverride y u)
   where
-    (ps, qs') = renderRoute u
+    (ps, qs') = renderRoute y u

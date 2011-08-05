@@ -28,7 +28,7 @@ import Yesod.Internal.Core
 import Yesod.Handler
 import Yesod.Internal.Dispatch
 
-import Web.PathPieces (SinglePiece (..), MultiPiece (..))
+import Yesod.Internal.PathPieces (SinglePiece (..), MultiPiece (..))
 import Yesod.Internal.RouteParsing (THResource, Pieces (..), createRoutes, createRender, Resource (..), parseRoutes, parseRoutesFile)
 import Language.Haskell.TH.Syntax
 
@@ -114,7 +114,9 @@ mkYesodGeneral name args clazzes isSub res = do
     let x = TySynInstD ''Route [arg] $ ConT routesName
 
     render <- createRender th
-    let x' = InstanceD [] (ConT ''RenderRoute `AppT` ConT routesName)
+    let x' = InstanceD [] (ConT ''RenderRoute
+                    `AppT` (if isSub then VarT (mkName "master") else ConT name')
+                    `AppT` ConT routesName)
                 [ FunD (mkName "renderRoute") render
                 ]
 
