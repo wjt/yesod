@@ -45,7 +45,7 @@ data AppConfig e = AppConfig
 
 -- | Load an @'AppConfig'@ from a YAML-formatted file located at
 --   @config\/settings.yml@.
-loadConfig :: AppEnv e => e -> IO (AppConfig e)
+loadConfig :: (Show e, AppEnv e) => e -> IO (AppConfig e)
 loadConfig env = do
     allSettings <- (join $ YAML.decodeFile ("config/settings.yml" :: String)) >>= fromMapping
     settings    <- lookupMapping (show env) allSettings
