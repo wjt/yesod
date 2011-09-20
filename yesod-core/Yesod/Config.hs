@@ -47,20 +47,26 @@ data AppConfig e = AppConfig
 --   @config\/settings.yml@.
 loadConfig :: (Show e, AppEnv e) => e -> IO (AppConfig e)
 loadConfig env = do
-    allSettings <- (join $ YAML.decodeFile ("config/settings.yml" :: String)) >>= fromMapping
-    settings    <- lookupMapping (show env) allSettings
-    hostS       <- lookupScalar "host" settings
-    port        <- fmap read $ lookupScalar "port" settings
+    allSettings         <- (join $ YAML.decodeFile ("config/settings.yml" :: String)) >>= fromMapping
+    settings            <- lookupMapping (show env) allSettings
+    hostS               <- lookupScalar "host" settings
+    portS               <- lookupScalar "port" settings
+    port                <- readInt "port" portS
     connectionPoolSizeS <- lookupScalar "connectionPoolSize" settings
+    connectionPoolSize' <- readInt "connection pool size" connectionPoolSizeS
 
     return $ AppConfig
         { appEnv  = env
         , appPort = port
         , appRoot = T.pack $ hostS ++ addPort port
-        , connectionPoolSize = read connectionPoolSizeS
+        , connectionPoolSize = connectionPoolSize'
         }
 
     where
+        readInt desc s =
+            case reads s of
+                (i, _):_ -> return i
+                [] -> error $ concat ["Invalid ", desc, ": ", s]
         addPort :: Int -> String
         addPort p = if displayPort env
                         then ":" ++ show p else ""
