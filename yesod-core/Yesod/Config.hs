@@ -1,8 +1,7 @@
 {-# OPTIONS -fno-warn-missing-signatures #-}
 {-# LANGUAGE QuasiQuotes                 #-}
 module Yesod.Config
-    ( AppEnv(..)
-    , AppConfig(..)
+    ( AppConfig(..)
     , loadConfig
     , loadPostgresqlConnStr
     , loadSqliteConnStr
@@ -16,9 +15,6 @@ import Text.Shakespeare.Text (st)
 
 import qualified Data.Object.Yaml as YAML
 import qualified Data.Text        as T
-
-class AppEnv e where
-    displayPort :: e -> Bool
 
 -- | Dynamic per-environment configuration which can be loaded at
 --   run-time negating the need to recompile between environments.
@@ -45,11 +41,11 @@ data AppConfig e = AppConfig
 
 -- | Load an @'AppConfig'@ from a YAML-formatted file located at
 --   @config\/settings.yml@.
-loadConfig :: (Show e, AppEnv e) => e -> IO (AppConfig e)
+loadConfig :: Show e => e -> IO (AppConfig e)
 loadConfig env = do
     allSettings         <- (join $ YAML.decodeFile ("config/settings.yml" :: String)) >>= fromMapping
     settings            <- lookupMapping (show env) allSettings
-    hostS               <- lookupScalar "host" settings
+    approot             <- lookupScalar "approot" settings
     portS               <- lookupScalar "port" settings
     port                <- readInt "port" portS
     connectionPoolSizeS <- lookupScalar "connectionPoolSize" settings
@@ -58,7 +54,7 @@ loadConfig env = do
     return $ AppConfig
         { appEnv  = env
         , appPort = port
-        , appRoot = T.pack $ hostS ++ addPort port
+        , appRoot = T.pack approot
         , connectionPoolSize = connectionPoolSize'
         }
 
@@ -67,9 +63,6 @@ loadConfig env = do
             case reads s of
                 (i, _):_ -> return i
                 [] -> error $ concat ["Invalid ", desc, ": ", s]
-        addPort :: Int -> String
-        addPort p = if displayPort env
-                        then ":" ++ show p else ""
 
 -- | Load Postgresql settings from a YAML-formatted file located at
 --   @config\/postgresql.yml@.
